@@ -1,0 +1,54 @@
+# Python / venv
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+
+# Video (both cases; generated + samples, never commit large media)
+*.[aA][vV][iI]
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[mM][kK][vV]
+*.[wW][eE][bB][mM]
+/tmp/
+temp/
+
+# Model weights (never commit; AGPL/provenance review pending)
+*.pt
+*.onnx
+*.bin
+*.ckpt
+*.safetensors
+weights/
+models/
+checkpoints/
+
+# Datasets (never commit; large, outside version control)
+data/
+dataset/
+datasets/
+*.zip
+
+# Generated outputs / evidence
+evidence/
+output/
+outputs/
+annotated/
+predictions/
+runs/
+
+# Local env / secrets / logs
+.env
+.env.*
+*.log
+secrets/
+
+# SAM CLI local build artifacts (never commit; regenerate via `sam build`)
+.aws-sam/
+build.toml

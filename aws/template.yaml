@@ -1,0 +1,54 @@
+# SeaRescue decision service (DRAFT — NOT APPLIED; no resources created).
+# Minimal footprint per Task 7: Lambda Function URL (IAM auth) + CloudWatch
+# Logs only. No DynamoDB/S3/API Gateway/NAT/EC2/GPU. Decision traces are
+# returned inline in the response and recorded in JSON structured logs;
+# a DynamoDB trace table is an optional, separately justified follow-up.
+# Local parity: scripts/decision_service.py is imported by the handler, so
+# Lambda and local tests run the identical decide_observation() function.
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: SeaRescue decision endpoint (Function URL, IAM auth, logs only).
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 10
+    MemorySize: 256
+
+Resources:
+  DecideFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../scripts/
+      Handler: lambda_handler.handler
+      # No boto3 layer needed: with no TRACE_TABLE set, the handler skips
+      # DynamoDB entirely and returns the trace inline (persisted: false).
+      FunctionUrlConfig:
+        AuthType: AWS_IAM  # same IAM-auth semantics (NOT NONE); SAM requires the AWS_IAM enum value
+      Policies:
+        - AWSLambdaBasicExecutionRole  # CloudWatch Logs write only
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+      Environment:
+        Variables:
+          POLICY_VERSION: shared-decide-v1
+          # TRACE_TABLE intentionally unset: traces go to structured
+          # CloudWatch Logs. Set it (plus a table + PutItem policy) only if
+          # queryable persistence becomes an essential requirement.
+
+  # Explicit stack-owned Lambda log group: auto-delete with the stack and
+  # bounded 30-day retention (prevents unbounded "never expire" growth).
+  # Naming via ${DecideFunction} uses Ref semantics -> the generated
+  # physical function name (<stack>-DecideFunction-<hash>), so the path is
+  # /aws/lambda/<generated-name> as Lambda expects.
+  # Circular dependency avoided by design: the dependency is one-way
+  # (LogGroup -> Function via the Ref). The function's LoggingConfig
+  # deliberately does NOT set LogGroup back to this resource — the Lambda
+  # service uses the existing group automatically at first log.
+  DecisionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${DecideFunction}"
+      RetentionInDays: 30
